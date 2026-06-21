@@ -722,6 +722,93 @@ main {
   font-family: 'Inter', monospace; letter-spacing: -0.03em;
 }
 
+/* ─── Owner Car Card (app-style horizontal) ─── */
+.ocard {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  transition: var(--transition);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+.ocard:hover { box-shadow: var(--shadow-lg); transform: translateY(-2px); }
+
+.ocard-main {
+  display: flex;
+  gap: 14px;
+  padding: 14px;
+}
+.ocard-img {
+  position: relative;
+  width: 110px;
+  height: 90px;
+  flex-shrink: 0;
+  border-radius: 13px;
+  overflow: hidden;
+}
+.ocard-img img { width: 100%; height: 100%; object-fit: cover; }
+.ocard-alert {
+  position: absolute; top: 6px; left: 6px;
+  width: 24px; height: 24px;
+  background: linear-gradient(135deg,#ef4444,#dc2626);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: .7rem;
+  box-shadow: 0 2px 8px rgba(239,68,68,.5);
+}
+
+.ocard-body { flex: 1; min-width: 0; }
+.ocard-head {
+  display: flex; align-items: flex-start;
+  justify-content: space-between; gap: 8px;
+}
+.ocard-title {
+  font-weight: 800; font-size: 1rem;
+  letter-spacing: -0.02em; line-height: 1.2;
+  color: var(--text);
+}
+.ocard-year { color: var(--muted); font-weight: 500; font-size: .82rem; }
+.ocard-status {
+  flex-shrink: 0;
+  font-size: .62rem; font-weight: 700;
+  padding: .25em .6em; border-radius: 20px;
+  display: inline-flex; align-items: center; gap: 4px;
+  text-transform: uppercase; letter-spacing: .04em;
+}
+.ocard-status i { font-size: .4rem; }
+.ocard-status.on  { background: rgba(16,185,129,.15); color: #6ee7b7; }
+.ocard-status.off { background: rgba(255,255,255,.08); color: var(--muted); }
+
+.ocard-price {
+  font-size: 1.15rem; font-weight: 800;
+  color: #818cf8; letter-spacing: -0.03em;
+  margin: 4px 0 6px;
+}
+.ocard-price span { font-size: .72rem; font-weight: 500; color: var(--muted); }
+
+.ocard-meta {
+  display: flex; flex-wrap: wrap; gap: 6px 14px;
+  font-size: .74rem; color: var(--muted);
+}
+.ocard-meta span { display: inline-flex; align-items: center; gap: 4px; }
+.ocard-meta i { font-size: .8rem; opacity: .8; }
+
+.ocard-actions {
+  display: flex; gap: 8px;
+  padding: 0 14px 14px;
+  margin-top: auto;
+}
+
+/* Very small phones: shrink image a touch */
+@media (max-width: 380px) {
+  .ocard-img { width: 88px; height: 76px; }
+  .ocard-title { font-size: .92rem; }
+  .ocard-price { font-size: 1.05rem; }
+}
+
 /* ─── Smoke Test Card ───────────────────────── */
 .smoke-stat-cell {
   display: flex; align-items: center; gap: 12px;

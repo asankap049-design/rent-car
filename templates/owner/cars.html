@@ -12,77 +12,59 @@
 </div>
 
 {% if cars %}
-<div class="row g-4">
+<div class="row g-3">
   {% for car in cars %}
-  <div class="col-6 col-xl-4">
-    <div class="card h-100 car-card">
-      <div class="car-img-wrap position-relative">
-        <img src="{{ car.image_url or 'https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=600&q=80' }}"
-             class="card-img-top" alt="{{ car.make }}"
-             onerror="this.src='https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=600&q=80'"/>
-        <span class="position-absolute top-0 end-0 m-3 badge {{ 'bg-success' if car.is_available else 'bg-secondary' }}"
-              style="font-size:.72rem;">
-          <i class="bi {{ 'bi-circle-fill' if car.is_available else 'bi-circle' }} me-1" style="font-size:.5rem;"></i>
-          {{ 'Available' if car.is_available else 'Unavailable' }}
-        </span>
-        {% if car.has_alerts %}
-        <span class="position-absolute top-0 start-0 m-3 badge bg-danger">
-          <i class="bi bi-exclamation-triangle-fill me-1" style="font-size:.65rem;"></i>Alert
-        </span>
-        {% endif %}
-      </div>
-      <div class="card-body d-flex flex-column p-4">
-        <h5 class="fw-bold mb-1" style="letter-spacing:-0.02em;">
-          {{ car.make }} {{ car.model }}
-          <span class="text-muted fw-normal" style="font-size:.9rem;">{{ car.year }}</span>
-        </h5>
-        {% if car.location %}
-        <p class="text-muted mb-2" style="font-size:.82rem;"><i class="bi bi-geo-alt me-1"></i>{{ car.location }}</p>
-        {% endif %}
-        <div class="d-flex gap-3 mb-3" style="font-size:.82rem;color:#64748b;">
-          <span><i class="bi bi-people me-1"></i>{{ car.seats }} seats</span>
-          <span><i class="bi bi-gear me-1"></i>{{ car.transmission|capitalize }}</span>
-          <span><i class="bi bi-fuel-pump me-1"></i>{{ car.fuel_type|capitalize }}</span>
+  <div class="col-12 col-xl-6">
+    <div class="ocard">
+      {# ── Top: image + info side by side ── #}
+      <div class="ocard-main">
+        <div class="ocard-img">
+          <img src="{{ car.image_url or 'https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=600&q=80' }}"
+               alt="{{ car.make }}"
+               onerror="this.src='https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=600&q=80'"/>
+          {% if car.has_alerts %}
+          <span class="ocard-alert"><i class="bi bi-exclamation-triangle-fill"></i></span>
+          {% endif %}
         </div>
-        <div class="d-flex align-items-center gap-3 mb-3 p-3 rounded-3"
-             style="background:rgba(79,70,229,0.04);border:1px solid rgba(79,70,229,0.08);">
-          <div class="text-center flex-fill">
-            <div style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#64748b;">Price/Day</div>
-            <div style="font-size:1.1rem;font-weight:800;color:#4f46e5;letter-spacing:-0.03em;">
-              Rs {{ "{:,.0f}".format(car.price_per_day) }}
+        <div class="ocard-body">
+          <div class="ocard-head">
+            <div class="ocard-title">
+              {{ car.make }} {{ car.model }}
+              <span class="ocard-year">{{ car.year }}</span>
             </div>
+            <span class="ocard-status {{ 'on' if car.is_available else 'off' }}">
+              <i class="bi bi-circle-fill"></i>{{ 'Live' if car.is_available else 'Paused' }}
+            </span>
           </div>
-          <div style="width:1px;background:rgba(99,102,241,0.15);height:32px;"></div>
-          <div class="text-center flex-fill">
-            <div style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#64748b;">Odometer</div>
-            <div style="font-size:.9rem;font-weight:700;color:#0f172a;">{{ "{:,.0f}".format(car.current_km or 0) }} km</div>
-          </div>
-          <div style="width:1px;background:rgba(99,102,241,0.15);height:32px;"></div>
-          <div class="text-center flex-fill">
-            <div style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#64748b;">Maint. Cost</div>
-            <div style="font-size:.9rem;font-weight:700;color:#0f172a;">Rs {{ "{:,.0f}".format(car.total_maintenance_cost) }}</div>
+          <div class="ocard-price">Rs {{ "{:,.0f}".format(car.price_per_day) }}<span>/day</span></div>
+          <div class="ocard-meta">
+            {% if car.location %}<span><i class="bi bi-geo-alt"></i>{{ car.location }}</span>{% endif %}
+            <span><i class="bi bi-speedometer2"></i>{{ "{:,.0f}".format(car.current_km or 0) }} km</span>
+            <span><i class="bi bi-wrench"></i>Rs {{ "{:,.0f}".format(car.total_maintenance_cost) }}</span>
           </div>
         </div>
-        <div class="d-flex gap-2 mt-auto flex-wrap">
-          <a href="{{ url_for('owner_maintenance', car_id=car.id) }}"
-             class="btn btn-sm flex-fill {{ 'btn-danger' if car.has_alerts else 'btn-outline-secondary' }}">
-            <i class="bi bi-wrench me-1"></i>Maintenance
-          </a>
-          <a href="{{ url_for('owner_car_edit', car_id=car.id) }}"
-             class="btn btn-sm btn-outline-primary" title="Edit">
-            <i class="bi bi-pencil"></i>
-          </a>
-          <form method="POST" action="{{ url_for('owner_car_toggle', car_id=car.id) }}" class="d-inline">
-            <button class="btn btn-sm {{ 'btn-outline-warning' if car.is_available else 'btn-outline-success' }}"
-                    title="{{ 'Pause' if car.is_available else 'Activate' }}">
-              <i class="bi {{ 'bi-pause-circle' if car.is_available else 'bi-play-circle' }}"></i>
-            </button>
-          </form>
-          <form method="POST" action="{{ url_for('owner_car_delete', car_id=car.id) }}" class="d-inline"
-                onsubmit="return confirm('Delete this car? All its bookings will also be deleted.')">
-            <button class="btn btn-sm btn-outline-danger" title="Delete"><i class="bi bi-trash"></i></button>
-          </form>
-        </div>
+      </div>
+
+      {# ── Action row ── #}
+      <div class="ocard-actions">
+        <a href="{{ url_for('owner_maintenance', car_id=car.id) }}"
+           class="btn btn-sm flex-fill {{ 'btn-danger' if car.has_alerts else 'btn-outline-secondary' }}">
+          <i class="bi bi-wrench me-1"></i>Maintenance
+        </a>
+        <a href="{{ url_for('owner_car_edit', car_id=car.id) }}"
+           class="btn btn-sm btn-outline-primary" title="Edit">
+          <i class="bi bi-pencil"></i>
+        </a>
+        <form method="POST" action="{{ url_for('owner_car_toggle', car_id=car.id) }}" class="d-inline">
+          <button class="btn btn-sm {{ 'btn-outline-warning' if car.is_available else 'btn-outline-success' }}"
+                  title="{{ 'Pause' if car.is_available else 'Activate' }}">
+            <i class="bi {{ 'bi-pause-circle' if car.is_available else 'bi-play-circle' }}"></i>
+          </button>
+        </form>
+        <form method="POST" action="{{ url_for('owner_car_delete', car_id=car.id) }}" class="d-inline"
+              onsubmit="return confirm('Delete this car? All its bookings will also be deleted.')">
+          <button class="btn btn-sm btn-outline-danger" title="Delete"><i class="bi bi-trash"></i></button>
+        </form>
       </div>
     </div>
   </div>
