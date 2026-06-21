@@ -43,6 +43,15 @@
             customer@demo.com / demo123
           </div>
         </div>
+
+        {# ── Language switcher ── #}
+        <div class="text-center mt-4">
+          <div class="lang-switcher d-inline-flex">
+            <a href="{{ url_for('set_lang', code='en') }}" class="lang-btn {% if current_lang == 'en' %}active{% endif %}">EN</a>
+            <a href="{{ url_for('set_lang', code='si') }}" class="lang-btn {% if current_lang == 'si' %}active{% endif %}">සි</a>
+            <a href="{{ url_for('set_lang', code='ta') }}" class="lang-btn {% if current_lang == 'ta' %}active{% endif %}">த</a>
+          </div>
+        </div>
       </div>
     </div>
   </div>
