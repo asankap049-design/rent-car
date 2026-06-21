@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% block title %}Add Maintenance Record — {{ car.make }} {{ car.model }}{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-7">
+    <a href="{{ url_for('owner_maintenance', car_id=car.id) }}" class="btn btn-sm btn-outline-secondary mb-4">
+      <i class="bi bi-arrow-left me-1"></i>Back to Maintenance
+    </a>
+    <div class="card border-0 shadow-sm rounded-4">
+      <div class="card-body p-4 p-md-5">
+        <h4 class="fw-bold mb-1">Add Maintenance Record</h4>
+        <p class="text-muted mb-4">{{ car.make }} {{ car.model }} {{ car.year }}</p>
+
+        <form method="POST">
+          {# ── Type selector ── #}
+          <div class="mb-4">
+            <label class="form-label fw-semibold">Service Type <span class="text-danger">*</span></label>
+            <div class="row g-2" id="typeGroup">
+              {% set types = [
+                ('oil_change',   'bi-droplet-fill',                 'warning', 'Oil Change'),
+                ('tire_change',  'bi-circle-fill',                  'info',    'Tire Change'),
+                ('full_service', 'bi-tools',                        'primary', 'Full Service'),
+                ('repair',       'bi-wrench-adjustable-circle-fill','danger',  'Repair'),
+                ('other',        'bi-gear-fill',                    'secondary','Other'),
+              ] %}
+              {% for val, icon, color, lbl in types %}
+              <div class="col-6 col-md-4">
+                <input type="radio" class="btn-check" name="record_type" id="type_{{ val }}"
+                       value="{{ val }}" {% if loop.first %}checked{% endif %}
+                       onchange="onTypeChange('{{ val }}')"/>
+                <label class="btn btn-outline-{{ color }} w-100 py-3 type-btn" for="type_{{ val }}">
+                  <i class="bi {{ icon }} d-block fs-4 mb-1"></i>
+                  <span class="small fw-semibold">{{ lbl }}</span>
+                </label>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label fw-semibold">Title</label>
+              <input type="text" name="title" id="titleField" class="form-control"
+                     placeholder="e.g. Oil Change — Castrol 5W-30" value="Oil Change"/>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Date <span class="text-danger">*</span></label>
+              <input type="date" name="service_date" class="form-control" value="{{ today }}" max="{{ today }}" required/>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Odometer at Service (KM)</label>
+              <input type="number" name="km_at_service" class="form-control"
+                     value="{{ car.current_km or '' }}" min="0" placeholder="e.g. 45000"/>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Cost (Rs) <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text">Rs</span>
+                <input type="number" name="cost" class="form-control" min="0" step="50"
+                       placeholder="0" required/>
+              </div>
+            </div>
+            <div class="col-md-6" id="nextKmField">
+              <label class="form-label fw-semibold">Next Service at (KM)</label>
+              <input type="number" name="next_service_km" class="form-control"
+                     min="0" placeholder="e.g. 50000"/>
+              <div class="form-text" id="nextKmHint">Enter the odometer KM for the next oil change / service.</div>
+            </div>
+            <div class="col-12" id="tireLifeField" style="display:none;">
+              <label class="form-label fw-semibold">
+                <i class="bi bi-circle-fill me-1 text-info"></i>Tire Full Life (KM)
+                <span class="text-muted fw-normal small">— tire % auto-calculated from this</span>
+              </label>
+              <input type="number" name="tire_life_km" class="form-control"
+                     value="{{ car.tire_life_km or 40000 }}" min="5000" step="1000"
+                     placeholder="e.g. 40000"/>
+              <div class="form-text">Default lifespan of this set of tires in KM. Condition % = 100 − (km_driven ÷ tire_life × 100)</div>
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold">Notes / Description</label>
+              <textarea name="description" class="form-control" rows="3"
+                        placeholder="Brand used, parts replaced, workshop name..."></textarea>
+            </div>
+          </div>
+
+          <div class="d-flex gap-3 mt-4">
+            <button type="submit" class="btn btn-primary px-5 fw-semibold">
+              <i class="bi bi-check-lg me-1"></i>Save Record
+            </button>
+            <a href="{{ url_for('owner_maintenance', car_id=car.id) }}" class="btn btn-outline-secondary px-4">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const defaultTitles = {
+  oil_change:   'Oil Change',
+  tire_change:  'Tire Change',
+  full_service: 'Full Service',
+  repair:       'Repair',
+  other:        'Maintenance',
+};
+const nextKmHints = {
+  oil_change:   'Next oil change odometer KM.',
+  full_service: 'Next full service odometer KM.',
+  tire_change:  'Optional: track next tire check KM.',
+  repair:       'Optional: follow-up check KM.',
+  other:        'Optional: next scheduled check KM.',
+};
+
+function onTypeChange(val) {
+  document.getElementById('titleField').placeholder = defaultTitles[val] || 'Service title';
+  if (!document.getElementById('titleField')._edited) {
+    document.getElementById('titleField').value = defaultTitles[val] || '';
+  }
+  document.getElementById('nextKmHint').textContent = nextKmHints[val] || '';
+  document.getElementById('tireLifeField').style.display = val === 'tire_change' ? '' : 'none';
+}
+
+document.getElementById('titleField').addEventListener('input', function() {
+  this._edited = true;
+});
+</script>
+{% endblock %}

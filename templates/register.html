@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Register — RentCar{% endblock %}
+{% block content %}
+<div class="row justify-content-center" style="padding:2rem 0;">
+  <div class="col-md-6 col-lg-5">
+    <div class="card" style="border-radius:28px!important;border:1px solid rgba(99,102,241,0.15)!important;overflow:hidden;">
+      <div class="card-body p-5">
+        <div class="text-center mb-4">
+          <div style="width:64px;height:64px;background:linear-gradient(135deg,#4f46e5,#7c3aed);border-radius:18px;display:inline-flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(79,70,229,0.35);margin-bottom:1.25rem;">
+            <i class="bi bi-person-plus-fill fs-3 text-white"></i>
+          </div>
+          <h2 class="fw-bold mb-1" style="font-weight:800;letter-spacing:-0.04em;">Create Account</h2>
+          <p class="text-muted mb-0" style="font-size:.9rem;">Join RentCar today</p>
+        </div>
+        <form method="POST">
+          <div class="mb-3">
+            <label class="form-label">Full Name</label>
+            <input type="text" name="name" class="form-control" placeholder="Your full name" required/>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Email Address</label>
+            <input type="email" name="email" class="form-control" placeholder="you@example.com" required/>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Phone Number</label>
+            <input type="tel" name="phone" class="form-control" placeholder="07X XXXXXXX"/>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Password</label>
+            <input type="password" name="password" class="form-control" placeholder="At least 6 characters" required/>
+          </div>
+          <div class="mb-4">
+            <label class="form-label">Confirm Password</label>
+            <input type="password" name="confirm_password" class="form-control" placeholder="Repeat password" required/>
+          </div>
+          <div class="mb-4">
+            <label class="form-label">I am a</label>
+            <div class="row g-3">
+              <div class="col-6">
+                <input type="radio" class="btn-check" name="role" id="role_customer" value="customer" checked/>
+                <label class="btn btn-outline-primary w-100 py-3" for="role_customer"
+                       style="border-radius:14px!important;">
+                  <i class="bi bi-person-fill d-block fs-3 mb-1"></i>
+                  <strong style="font-size:.9rem;">Customer</strong>
+                  <div class="small text-muted">I want to rent a car</div>
+                </label>
+              </div>
+              <div class="col-6">
+                <input type="radio" class="btn-check" name="role" id="role_owner" value="owner"/>
+                <label class="btn btn-outline-warning w-100 py-3" for="role_owner"
+                       style="border-radius:14px!important;">
+                  <i class="bi bi-key-fill d-block fs-3 mb-1"></i>
+                  <strong style="font-size:.9rem;">Owner</strong>
+                  <div class="small text-muted">I want to list my car</div>
+                </label>
+              </div>
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary btn-lg w-100 fw-semibold" style="padding:.8rem;">
+            <i class="bi bi-person-check me-2"></i>Create Account
+          </button>
+        </form>
+        <hr class="my-4" style="border-color:rgba(99,102,241,0.1);"/>
+        <p class="text-center mb-0" style="font-size:.875rem;color:#64748b;">
+          Already have an account?
+          <a href="{{ url_for('login') }}" class="fw-semibold text-decoration-none" style="color:#4f46e5;">Sign In</a>
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

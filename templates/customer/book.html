@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+{% block title %}Book {{ car.make }} {{ car.model }} — RentCar{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-9">
+    <a href="{{ url_for('customer_cars') }}" class="btn btn-sm btn-outline-secondary mb-4">
+      <i class="bi bi-arrow-left me-1"></i>Back to Cars
+    </a>
+
+    <div class="row g-4">
+      {# ── Car details card ── #}
+      <div class="col-md-6">
+        <div class="card h-100">
+          <div class="car-img-wrap" style="border-radius:18px 18px 0 0;">
+            <img src="{{ car.image_url or 'https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=600&q=80' }}"
+                 class="card-img-top" alt="{{ car.make }} {{ car.model }}"
+                 onerror="this.src='https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=600&q=80'"/>
+          </div>
+          <div class="card-body p-4">
+            <h4 class="fw-bold mb-1" style="letter-spacing:-0.04em;">
+              {{ car.make }} {{ car.model }}
+              <span class="text-muted fw-normal" style="font-size:.9rem;">{{ car.year }}</span>
+            </h4>
+            {% if car.location %}
+            <p class="text-muted mb-3" style="font-size:.85rem;">
+              <i class="bi bi-geo-alt me-1"></i>{{ car.location }}
+            </p>
+            {% endif %}
+
+            <div class="row g-2 mb-3">
+              <div class="col-4">
+                <div class="text-center p-2 rounded-3"
+                     style="background:rgba(79,70,229,0.06);border:1px solid rgba(79,70,229,0.1);">
+                  <i class="bi bi-people d-block mb-1" style="color:#4f46e5;font-size:1.2rem;"></i>
+                  <div style="font-size:.75rem;color:#64748b;font-weight:600;">{{ car.seats }} seats</div>
+                </div>
+              </div>
+              <div class="col-4">
+                <div class="text-center p-2 rounded-3"
+                     style="background:rgba(79,70,229,0.06);border:1px solid rgba(79,70,229,0.1);">
+                  <i class="bi bi-gear d-block mb-1" style="color:#4f46e5;font-size:1.2rem;"></i>
+                  <div style="font-size:.75rem;color:#64748b;font-weight:600;">{{ car.transmission|capitalize }}</div>
+                </div>
+              </div>
+              <div class="col-4">
+                <div class="text-center p-2 rounded-3"
+                     style="background:rgba(79,70,229,0.06);border:1px solid rgba(79,70,229,0.1);">
+                  <i class="bi bi-fuel-pump d-block mb-1" style="color:#4f46e5;font-size:1.2rem;"></i>
+                  <div style="font-size:.75rem;color:#64748b;font-weight:600;">{{ car.fuel_type|capitalize }}</div>
+                </div>
+              </div>
+            </div>
+
+            {% if car.description %}
+            <p class="text-muted mb-3" style="font-size:.875rem;">{{ car.description }}</p>
+            {% endif %}
+
+            <div class="d-flex justify-content-between align-items-center pt-3"
+                 style="border-top:1px solid rgba(99,102,241,0.08);">
+              <div>
+                <span style="font-size:1.6rem;font-weight:800;color:#4f46e5;letter-spacing:-0.04em;">
+                  Rs {{ "{:,.0f}".format(car.price_per_day) }}
+                </span>
+                <span class="text-muted" style="font-size:.85rem;"> / day</span>
+              </div>
+              <div class="text-muted" style="font-size:.82rem;">
+                <i class="bi bi-person me-1"></i>{{ car.owner.name }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {# ── Booking form card ── #}
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-body p-4">
+            <h5 class="fw-bold mb-4" style="letter-spacing:-0.02em;">
+              <i class="bi bi-calendar-plus me-2" style="color:#4f46e5;"></i>Book This Car
+            </h5>
+            <form method="POST" id="bookForm">
+              <div class="mb-3">
+                <label class="form-label">Pickup Date</label>
+                <input type="date" name="start_date" id="start_date" class="form-control"
+                       min="{{ today }}" required/>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Return Date</label>
+                <input type="date" name="end_date" id="end_date" class="form-control"
+                       min="{{ today }}" required/>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Notes <span class="text-muted fw-normal">(optional)</span></label>
+                <textarea name="notes" class="form-control" rows="3"
+                          placeholder="Any special requests..."></textarea>
+              </div>
+
+              <div class="p-3 rounded-3 mb-4" id="pricePreview" style="display:none;
+                   background:linear-gradient(135deg,rgba(79,70,229,0.06),rgba(124,58,237,0.06));
+                   border:1px solid rgba(79,70,229,0.12);">
+                <div class="d-flex justify-content-between mb-1" style="font-size:.875rem;">
+                  <span class="text-muted">Duration</span>
+                  <span class="fw-semibold" id="previewDays">—</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2" style="font-size:.875rem;">
+                  <span class="text-muted">Rate</span>
+                  <span class="fw-semibold">Rs {{ "{:,.0f}".format(car.price_per_day) }} / day</span>
+                </div>
+                <div class="d-flex justify-content-between fw-bold pt-2"
+                     style="border-top:1px solid rgba(79,70,229,0.15);font-size:1rem;">
+                  <span>Estimated Total</span>
+                  <span style="color:#4f46e5;" id="previewTotal">—</span>
+                </div>
+              </div>
+
+              <button type="submit" class="btn btn-primary btn-lg w-100 fw-semibold"
+                      style="padding:.8rem;">
+                <i class="bi bi-send me-2"></i>Send Booking Request
+              </button>
+              <p class="text-center text-muted mt-2 mb-0" style="font-size:.8rem;">
+                The owner will review and confirm your request
+              </p>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const pricePerDay = {{ car.price_per_day }};
+const startEl = document.getElementById('start_date');
+const endEl   = document.getElementById('end_date');
+const preview = document.getElementById('pricePreview');
+
+function updatePreview() {
+  const s = startEl.value, e = endEl.value;
+  if (!s || !e) { preview.style.display = 'none'; return; }
+  const days = Math.max((new Date(e) - new Date(s)) / 86400000, 0);
+  if (days <= 0) { preview.style.display = 'none'; return; }
+  document.getElementById('previewDays').textContent  = days + ' day' + (days !== 1 ? 's' : '');
+  document.getElementById('previewTotal').textContent = 'Rs ' + (days * pricePerDay).toLocaleString();
+  preview.style.display = '';
+}
+
+startEl.addEventListener('change', () => {
+  if (endEl.value && endEl.value <= startEl.value) endEl.value = '';
+  updatePreview();
+});
+endEl.addEventListener('change', updatePreview);
+</script>
+{% endblock %}

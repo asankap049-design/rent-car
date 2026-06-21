@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}My Bookings — RentCar{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="fw-bold mb-0" style="letter-spacing:-0.04em;">{{ t('my_bookings') }}</h4>
+    <p class="text-muted mb-0" style="font-size:.875rem;">Track all your rental requests</p>
+  </div>
+  <a href="{{ url_for('customer_cars') }}" class="btn btn-primary">
+    <i class="bi bi-plus-lg me-1"></i>New Booking
+  </a>
+</div>
+
+<div class="d-flex gap-2 mb-4 flex-wrap filter-pills">
+  {% for s in ['', 'pending', 'confirmed', 'completed', 'rejected', 'cancelled'] %}
+  <a href="{{ url_for('customer_bookings', status=s) }}"
+     class="btn btn-sm {{ 'btn-primary' if status_filter == s else 'btn-outline-secondary' }}">
+    {{ 'All' if s == '' else s|capitalize }}
+  </a>
+  {% endfor %}
+</div>
+
+{% if bookings %}
+<div class="row g-4">
+  {% for b in bookings %}
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-body p-4">
+        <div class="d-flex gap-3">
+          <img src="{{ b.car.image_url or 'https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=200&q=80' }}"
+               class="rounded-3 flex-shrink-0"
+               style="width:92px;height:72px;object-fit:cover;"
+               onerror="this.src='https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=200&q=80'"/>
+          <div class="flex-fill min-w-0">
+            <div class="d-flex justify-content-between align-items-start gap-2 mb-1">
+              <h6 class="fw-bold mb-0" style="letter-spacing:-0.02em;">
+                {{ b.car.make }} {{ b.car.model }}
+                <span class="text-muted fw-normal">{{ b.car.year }}</span>
+              </h6>
+              <span class="badge bg-{{ b.status_color }} flex-shrink-0">{{ b.status|capitalize }}</span>
+            </div>
+            <p class="text-muted mb-1" style="font-size:.82rem;">
+              <i class="bi bi-calendar3 me-1"></i>
+              {{ b.start_date.strftime('%d %b %Y') }} → {{ b.end_date.strftime('%d %b %Y') }}
+              <span class="ms-1 badge bg-secondary" style="font-size:.68rem;">{{ b.days }}d</span>
+            </p>
+            {% if b.car.location %}
+            <p class="text-muted mb-1" style="font-size:.82rem;">
+              <i class="bi bi-geo-alt me-1"></i>{{ b.car.location }}
+            </p>
+            {% endif %}
+            <p class="fw-bold mb-0" style="color:#4f46e5;">Rs {{ "{:,.0f}".format(b.total_price) }}</p>
+          </div>
+        </div>
+        {% if b.notes %}
+        <p class="text-muted mt-2 mb-0" style="font-size:.82rem;border-top:1px solid rgba(99,102,241,0.08);padding-top:.75rem;">
+          <i class="bi bi-chat-left-text me-1"></i>{{ b.notes }}
+        </p>
+        {% endif %}
+        <div class="d-flex justify-content-between align-items-center mt-3 pt-2"
+             style="border-top:1px solid rgba(99,102,241,0.08);">
+          <small class="text-muted">Booked {{ b.created_at.strftime('%d %b %Y') }}</small>
+          {% if b.status in ('pending', 'confirmed') %}
+          <form method="POST" action="{{ url_for('customer_cancel', booking_id=b.id) }}"
+                onsubmit="return confirm('Cancel this booking?')">
+            <button class="btn btn-sm btn-outline-danger">
+              <i class="bi bi-x-circle me-1"></i>Cancel
+            </button>
+          </form>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="card text-center py-5">
+  <div class="card-body text-muted">
+    <div style="width:72px;height:72px;background:rgba(79,70,229,0.08);border-radius:20px;display:inline-flex;align-items:center;justify-content:center;margin-bottom:1rem;">
+      <i class="bi bi-calendar-x fs-2" style="color:#4f46e5;"></i>
+    </div>
+    <p class="fw-semibold mb-1">No bookings found</p>
+    <a href="{{ url_for('customer_cars') }}" class="btn btn-primary mt-1">Browse Cars</a>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

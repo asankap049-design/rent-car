@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Login — RentCar{% endblock %}
+{% block content %}
+<div class="row justify-content-center" style="min-height:80vh;align-items:center;padding:2rem 0;">
+  <div class="col-md-5 col-lg-4">
+    <div class="card" style="border-radius:28px!important;border:1px solid rgba(99,102,241,0.15)!important;overflow:hidden;">
+      <div class="card-body p-5">
+        <div class="text-center mb-5">
+          <div style="width:64px;height:64px;background:linear-gradient(135deg,#4f46e5,#7c3aed);border-radius:18px;display:inline-flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(79,70,229,0.35);margin-bottom:1.25rem;">
+            <i class="bi bi-car-front-fill fs-3 text-white"></i>
+          </div>
+          <h2 class="fw-800 mb-1" style="font-weight:800;letter-spacing:-0.04em;">Welcome back</h2>
+          <p class="text-muted mb-0" style="font-size:.9rem;">Sign in to your RentCar account</p>
+        </div>
+        <form method="POST">
+          <div class="mb-3">
+            <label class="form-label">Email address</label>
+            <input type="email" name="email" class="form-control form-control-lg"
+                   placeholder="you@example.com" required autofocus/>
+          </div>
+          <div class="mb-4">
+            <label class="form-label">Password</label>
+            <input type="password" name="password" class="form-control form-control-lg"
+                   placeholder="••••••••" required/>
+          </div>
+          <div class="form-check mb-4">
+            <input class="form-check-input" type="checkbox" name="remember" id="remember"/>
+            <label class="form-check-label text-muted" for="remember" style="font-size:.875rem;">Remember me</label>
+          </div>
+          <button type="submit" class="btn btn-primary btn-lg w-100 fw-semibold" style="padding:.8rem;">
+            <i class="bi bi-box-arrow-in-right me-2"></i>Sign In
+          </button>
+        </form>
+        <hr class="my-4" style="border-color:rgba(99,102,241,0.1);"/>
+        <p class="text-center mb-3" style="font-size:.875rem;color:#64748b;">
+          Don't have an account?
+          <a href="{{ url_for('register') }}" class="fw-semibold text-decoration-none" style="color:#4f46e5;">Register free</a>
+        </p>
+        <div class="p-3 rounded-3" style="background:rgba(79,70,229,0.06);border:1px solid rgba(79,70,229,0.1);">
+          <div class="small text-muted mb-1"><i class="bi bi-info-circle me-1"></i><strong>Demo accounts</strong></div>
+          <div class="small text-muted" style="font-family:monospace;line-height:1.8;">
+            owner@demo.com / demo123<br/>
+            customer@demo.com / demo123
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

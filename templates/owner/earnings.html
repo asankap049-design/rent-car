@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}Earnings — RentCar{% endblock %}
+{% block content %}
+<h4 class="fw-bold mb-4">Earnings Dashboard</h4>
+
+<div class="row g-4 mb-5">
+  <div class="col-md-4">
+    <div class="stat-card" style="border-left:4px solid #16a34a;">
+      <div class="stat-icon" style="background:#f0fdf4;color:#16a34a;"><i class="bi bi-cash-stack"></i></div>
+      <div>
+        <div class="stat-label">Total Earned</div>
+        <div class="stat-value">Rs {{ "{:,.0f}".format(total) }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="stat-card" style="border-left:4px solid #f59e0b;">
+      <div class="stat-icon" style="background:#fffbeb;color:#f59e0b;"><i class="bi bi-hourglass-split"></i></div>
+      <div>
+        <div class="stat-label">Pending Earnings</div>
+        <div class="stat-value">Rs {{ "{:,.0f}".format(pending_total) }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="stat-card" style="border-left:4px solid #1e3a8a;">
+      <div class="stat-icon" style="background:#eff6ff;color:#1e3a8a;"><i class="bi bi-graph-up-arrow"></i></div>
+      <div>
+        <div class="stat-label">Cars Listed</div>
+        <div class="stat-value">{{ per_car|length }}</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if monthly %}
+<div class="card border-0 shadow-sm rounded-4 mb-4">
+  <div class="card-body p-4">
+    <h5 class="fw-bold mb-4">Monthly Earnings</h5>
+    <canvas id="monthlyChart" height="80"></canvas>
+  </div>
+</div>
+{% endif %}
+
+{% if per_car %}
+<div class="card border-0 shadow-sm rounded-4">
+  <div class="card-body p-4">
+    <h5 class="fw-bold mb-4">Earnings by Car</h5>
+    <div class="table-responsive">
+      <table class="table align-middle mb-0">
+        <thead class="table-light">
+          <tr><th>Car</th><th>Trips</th><th>Earnings</th><th>Share</th></tr>
+        </thead>
+        <tbody>
+          {% for item in per_car %}
+          <tr>
+            <td>
+              <strong>{{ item.car.make }} {{ item.car.model }}</strong>
+              <div class="text-muted small">{{ item.car.year }} · Rs {{ "{:,.0f}".format(item.car.price_per_day) }}/day</div>
+            </td>
+            <td>{{ item.trips }}</td>
+            <td class="fw-bold text-success">Rs {{ "{:,.0f}".format(item.earned) }}</td>
+            <td style="min-width:120px;">
+              {% set pct = (item.earned / total * 100)|round(1) if total > 0 else 0 %}
+              <div class="progress" style="height:8px;">
+                <div class="progress-bar bg-primary" style="width:{{ pct }}%;"></div>
+              </div>
+              <small class="text-muted">{{ pct }}%</small>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% else %}
+<div class="text-center py-5 text-muted">
+  <i class="bi bi-cash-coin fs-1 d-block mb-3"></i>
+  No earnings yet. Start by adding cars and getting bookings!
+</div>
+{% endif %}
+{% endblock %}
+{% block scripts %}
+{% if monthly %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+const ctx = document.getElementById('monthlyChart');
+const labels = {{ monthly.keys()|list|tojson }};
+const data = {{ monthly.values()|list|tojson }};
+new Chart(ctx, {
+  type: 'bar',
+  data: {
+    labels: labels,
+    datasets: [{
+      label: 'Earnings (Rs)',
+      data: data,
+      backgroundColor: '#2563eb',
+      borderRadius: 6,
+    }]
+  },
+  options: {
+    plugins: { legend: { display: false } },
+    scales: {
+      y: { beginAtZero: true, ticks: { callback: v => 'Rs ' + v.toLocaleString() } }
+    }
+  }
+});
+</script>
+{% endif %}
+{% endblock %}

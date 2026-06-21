@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — RentCar{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="fw-bold mb-0" style="letter-spacing:-0.04em;">{{ t('welcome_back') }}, {{ current_user.name }}</h4>
+    <p class="text-muted mb-0" style="font-size:.875rem;">Here's your rental activity</p>
+  </div>
+  <a href="{{ url_for('customer_cars') }}" class="btn btn-primary">
+    <i class="bi bi-search me-1"></i>{{ t('browse_cars') }}
+  </a>
+</div>
+
+<div class="row g-4 mb-5">
+  <div class="col-sm-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;">
+        <i class="bi bi-check-circle-fill"></i>
+      </div>
+      <div>
+        <div class="stat-label">{{ t('completed_trips') }}</div>
+        <div class="stat-value">{{ total_trips }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:linear-gradient(135deg,#10b981,#059669);color:#fff;">
+        <i class="bi bi-car-front-fill"></i>
+      </div>
+      <div>
+        <div class="stat-label">{{ t('active_bookings') }}</div>
+        <div class="stat-value">{{ active|length }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:linear-gradient(135deg,#f59e0b,#f97316);color:#fff;">
+        <i class="bi bi-hourglass-split"></i>
+      </div>
+      <div>
+        <div class="stat-label">{{ t('pending') }}</div>
+        <div class="stat-value">{{ pending|length }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:linear-gradient(135deg,#06b6d4,#0284c7);color:#fff;">
+        <i class="bi bi-cash-stack"></i>
+      </div>
+      <div>
+        <div class="stat-label">{{ t('total_spent') }}</div>
+        <div class="stat-value" style="font-size:1.2rem;">Rs {{ "{:,.0f}".format(total_spent) }}</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h5 class="fw-bold mb-0">{{ t('recent_bookings') }}</h5>
+  <a href="{{ url_for('customer_bookings') }}" class="btn btn-sm btn-outline-primary">{{ t('view_all') }}</a>
+</div>
+
+{% if recent %}
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr><th>Car</th><th>Dates</th><th>Days</th><th>Total</th><th>Status</th></tr>
+      </thead>
+      <tbody>
+        {% for b in recent %}
+        <tr>
+          <td>
+            <strong>{{ b.car.make }} {{ b.car.model }}</strong>
+            <div class="small text-muted">{{ b.car.year }}</div>
+          </td>
+          <td>{{ b.start_date.strftime('%d %b') }} → {{ b.end_date.strftime('%d %b %Y') }}</td>
+          <td><span class="badge bg-secondary">{{ b.days }}d</span></td>
+          <td class="fw-semibold">Rs {{ "{:,.0f}".format(b.total_price) }}</td>
+          <td><span class="badge bg-{{ b.status_color }}">{{ b.status|capitalize }}</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="card text-center py-5">
+  <div class="card-body text-muted">
+    <div style="width:72px;height:72px;background:rgba(79,70,229,0.08);border-radius:20px;display:inline-flex;align-items:center;justify-content:center;margin-bottom:1rem;">
+      <i class="bi bi-calendar-x fs-2" style="color:#4f46e5;"></i>
+    </div>
+    <p class="mb-2 fw-semibold">No bookings yet</p>
+    <a href="{{ url_for('customer_cars') }}" class="btn btn-primary mt-1">
+      <i class="bi bi-search me-1"></i>Browse Available Cars
+    </a>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}{{ action }} Car — RentCar{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-7">
+    <a href="{{ url_for('owner_cars') }}" class="btn btn-sm btn-outline-secondary mb-4">
+      <i class="bi bi-arrow-left me-1"></i>Back to My Cars
+    </a>
+    <div class="card border-0 shadow-sm rounded-4">
+      <div class="card-body p-4 p-md-5">
+        <h4 class="fw-bold mb-4"><i class="bi bi-car-front me-2"></i>{{ action }} Car</h4>
+        <form method="POST">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Make <span class="text-danger">*</span></label>
+              <input type="text" name="make" class="form-control" placeholder="e.g. Toyota"
+                     value="{{ car.make if car else '' }}" required/>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Model <span class="text-danger">*</span></label>
+              <input type="text" name="model" class="form-control" placeholder="e.g. Prius"
+                     value="{{ car.model if car else '' }}" required/>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Year <span class="text-danger">*</span></label>
+              <input type="number" name="year" class="form-control" min="1990" max="2030"
+                     placeholder="2022" value="{{ car.year if car else '' }}" required/>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Price / Day (Rs) <span class="text-danger">*</span></label>
+              <input type="number" name="price_per_day" class="form-control" min="100" step="100"
+                     placeholder="5000" value="{{ car.price_per_day if car else '' }}" required/>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Seats</label>
+              <input type="number" name="seats" class="form-control" min="1" max="15"
+                     value="{{ car.seats if car else 5 }}"/>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Transmission</label>
+              <select name="transmission" class="form-select">
+                <option value="auto" {% if car and car.transmission == 'auto' %}selected{% endif %}>Automatic</option>
+                <option value="manual" {% if car and car.transmission == 'manual' %}selected{% endif %}>Manual</option>
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Fuel Type</label>
+              <select name="fuel_type" class="form-select">
+                <option value="petrol" {% if car and car.fuel_type == 'petrol' %}selected{% endif %}>Petrol</option>
+                <option value="diesel" {% if car and car.fuel_type == 'diesel' %}selected{% endif %}>Diesel</option>
+                <option value="electric" {% if car and car.fuel_type == 'electric' %}selected{% endif %}>Electric</option>
+                <option value="hybrid" {% if car and car.fuel_type == 'hybrid' %}selected{% endif %}>Hybrid</option>
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Location</label>
+              <input type="text" name="location" class="form-control" placeholder="e.g. Colombo"
+                     value="{{ car.location if car else '' }}"/>
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold">Image URL <span class="text-muted fw-normal">(optional)</span></label>
+              <input type="url" name="image_url" id="imgUrl" class="form-control" placeholder="https://..."
+                     value="{{ car.image_url if car else '' }}"/>
+            </div>
+            <div class="col-12" id="imgPreviewWrap" style="{{ '' if (car and car.image_url) else 'display:none' }}">
+              <img id="imgPreview" src="{{ car.image_url if (car and car.image_url) else '' }}"
+                   class="rounded-3 mt-1" style="max-height:150px;object-fit:cover;max-width:100%;"/>
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold">Description</label>
+              <textarea name="description" class="form-control" rows="3"
+                        placeholder="Tell customers about this car...">{{ car.description if car else '' }}</textarea>
+            </div>
+          </div>
+          <div class="d-flex gap-3 mt-4">
+            <button type="submit" class="btn btn-primary px-5 fw-semibold">
+              <i class="bi bi-check-lg me-1"></i>{{ action }} Car
+            </button>
+            <a href="{{ url_for('owner_cars') }}" class="btn btn-outline-secondary px-4">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+document.getElementById('imgUrl').addEventListener('input', function() {
+  const wrap = document.getElementById('imgPreviewWrap');
+  const img = document.getElementById('imgPreview');
+  if (this.value) { img.src = this.value; wrap.style.display = ''; }
+  else wrap.style.display = 'none';
+});
+</script>
+{% endblock %}

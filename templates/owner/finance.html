@@ -1,0 +1,371 @@
+{% extends "base.html" %}
+{% block title %}Finance — RentCar{% endblock %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="fw-bold mb-0">Finance Overview</h4>
+    <span class="text-muted small"><i class="bi bi-cash me-1"></i>Cash transactions · Card payments coming soon</span>
+  </div>
+</div>
+
+{# ── Summary Cards ── #}
+<div class="row g-4 mb-4">
+  <div class="col-sm-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:linear-gradient(135deg,#10b981,#059669);color:#fff;">
+        <i class="bi bi-arrow-down-circle-fill"></i>
+      </div>
+      <div>
+        <div class="stat-label">{{ t('total_income') }}</div>
+        <div class="stat-value" style="color:#059669;font-size:1.2rem;">Rs {{ "{:,.0f}".format(total_income) }}</div>
+        {% if pending_income > 0 %}
+        <div class="small text-muted mt-1">+ Rs {{ "{:,.0f}".format(pending_income) }} pending</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;">
+        <i class="bi bi-arrow-up-circle-fill"></i>
+      </div>
+      <div>
+        <div class="stat-label">{{ t('total_cost') }}</div>
+        <div class="stat-value" style="color:#dc2626;font-size:1.2rem;">Rs {{ "{:,.0f}".format(total_cost) }}</div>
+        <div class="small text-muted mt-1">Maintenance expenses</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    {% set profit_color = '#059669' if net_profit >= 0 else '#dc2626' %}
+    {% set profit_grad  = 'linear-gradient(135deg,#10b981,#059669)' if net_profit >= 0 else 'linear-gradient(135deg,#ef4444,#dc2626)' %}
+    <div class="stat-card">
+      <div class="stat-icon" style="background:{{ profit_grad }};color:#fff;">
+        <i class="bi {{ 'bi-graph-up-arrow' if net_profit >= 0 else 'bi-graph-down-arrow' }}"></i>
+      </div>
+      <div>
+        <div class="stat-label">{{ t('net_profit') }}</div>
+        <div class="stat-value" style="color:{{ profit_color }};font-size:1.2rem;">Rs {{ "{:,.0f}".format(net_profit) }}</div>
+        <div class="small text-muted mt-1">Income − Maintenance</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed);color:#fff;">
+        <i class="bi bi-percent"></i>
+      </div>
+      <div>
+        <div class="stat-label">{{ t('profit_margin') }}</div>
+        <div class="stat-value" style="color:{{ '#059669' if profit_margin >= 50 else ('#d97706' if profit_margin >= 20 else '#dc2626') }};">
+          {{ profit_margin }}%
+        </div>
+        <div class="small text-muted mt-1">Of rental income</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if not all_months %}
+<div class="text-center py-5 text-muted">
+  <i class="bi bi-bar-chart fs-1 d-block mb-3"></i>
+  No financial data yet. Add bookings and maintenance records to see your Finance overview.
+</div>
+{% else %}
+
+{# ── Profit bar ── #}
+{% if total_income > 0 %}
+<div class="card border-0 shadow-sm rounded-4 mb-4">
+  <div class="card-body p-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h6 class="fw-bold mb-0">Income Breakdown</h6>
+      <span class="small text-muted">How your income is split</span>
+    </div>
+    {% set cost_pct = [100, (total_cost / total_income * 100)|round|int]|min %}
+    {% set profit_pct = [0, 100 - cost_pct]|max %}
+    <div class="progress rounded-pill mb-2" style="height:28px;">
+      <div class="progress-bar fw-semibold" role="progressbar"
+           style="width:{{ profit_pct }}%;background:#16a34a;font-size:.8rem;"
+           title="Net Profit {{ profit_pct }}%">
+        {% if profit_pct > 8 %}Profit {{ profit_pct }}%{% endif %}
+      </div>
+      <div class="progress-bar fw-semibold" role="progressbar"
+           style="width:{{ cost_pct }}%;background:#dc2626;font-size:.8rem;"
+           title="Cost {{ cost_pct }}%">
+        {% if cost_pct > 8 %}Cost {{ cost_pct }}%{% endif %}
+      </div>
+    </div>
+    <div class="d-flex gap-4 small text-muted">
+      <span><span class="badge me-1" style="background:#16a34a;">&nbsp;</span>Profit — Rs {{ "{:,.0f}".format(net_profit) }}</span>
+      <span><span class="badge me-1" style="background:#dc2626;">&nbsp;</span>Cost — Rs {{ "{:,.0f}".format(total_cost) }}</span>
+      <span class="ms-auto fw-semibold text-dark">Total Income: Rs {{ "{:,.0f}".format(total_income) }}</span>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{# ── Monthly Chart ── #}
+<div class="card border-0 shadow-sm rounded-4 mb-4">
+  <div class="card-body p-4">
+    <h5 class="fw-bold mb-4"><i class="bi bi-bar-chart-line me-2"></i>Monthly Income vs Cost</h5>
+    <canvas id="financeChart" height="110"></canvas>
+    <div class="d-flex gap-4 justify-content-center mt-3 small text-muted">
+      <span><span class="badge me-1" style="background:#16a34a;">&nbsp;</span>Income (Cash)</span>
+      <span><span class="badge me-1" style="background:#dc2626;">&nbsp;</span>Maintenance Cost</span>
+      <span><span class="badge me-1" style="background:#1d4ed8;border-radius:50%;">&nbsp;</span>Net Profit</span>
+    </div>
+  </div>
+</div>
+
+{# ── Monthly Table ── #}
+<div class="card border-0 shadow-sm rounded-4 mb-4">
+  <div class="card-body p-4">
+    <h5 class="fw-bold mb-4"><i class="bi bi-table me-2"></i>Monthly Breakdown</h5>
+    <div class="table-responsive">
+      <table class="table align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Month</th>
+            <th class="text-end text-success">Income (Rs)</th>
+            <th class="text-end text-danger">Cost (Rs)</th>
+            <th class="text-end">Net Profit</th>
+            <th style="min-width:140px;">Margin</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for month, d in monthly_data.items() %}
+          {% set m_margin = (d.net / d.income * 100)|round|int if d.income > 0 else 0 %}
+          {% set net_col = '#16a34a' if d.net >= 0 else '#dc2626' %}
+          <tr>
+            <td class="fw-semibold">{{ month }}</td>
+            <td class="text-end text-success fw-semibold">{{ "{:,.0f}".format(d.income) }}</td>
+            <td class="text-end text-danger">{{ "{:,.0f}".format(d.cost) }}</td>
+            <td class="text-end fw-bold" style="color:{{ net_col }};">
+              {{ '+' if d.net >= 0 else '' }}{{ "{:,.0f}".format(d.net) }}
+            </td>
+            <td>
+              {% if d.income > 0 %}
+              <div class="d-flex align-items-center gap-2">
+                <div class="progress flex-fill rounded-pill" style="height:8px;">
+                  <div class="progress-bar" style="width:{{ [100,m_margin]|min if m_margin > 0 else 0 }}%;background:{{ '#16a34a' if m_margin >= 50 else ('#f59e0b' if m_margin >= 20 else '#dc2626') }};"></div>
+                </div>
+                <span class="small" style="color:{{ '#16a34a' if m_margin >= 50 else ('#f59e0b' if m_margin >= 20 else '#dc2626') }};">{{ m_margin }}%</span>
+              </div>
+              {% else %}
+              <span class="text-muted small">No income</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot class="table-light fw-bold">
+          <tr>
+            <td>Total</td>
+            <td class="text-end text-success">{{ "{:,.0f}".format(total_income) }}</td>
+            <td class="text-end text-danger">{{ "{:,.0f}".format(total_cost) }}</td>
+            <td class="text-end" style="color:{{ '#16a34a' if net_profit >= 0 else '#dc2626' }};">
+              {{ '+' if net_profit >= 0 else '' }}{{ "{:,.0f}".format(net_profit) }}
+            </td>
+            <td><span style="color:{{ '#16a34a' if profit_margin >= 50 else ('#f59e0b' if profit_margin >= 20 else '#dc2626') }};">{{ profit_margin }}%</span></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+</div>
+
+{# ── Per Car Table ── #}
+{% if per_car %}
+<div class="card border-0 shadow-sm rounded-4 mb-4">
+  <div class="card-body p-4">
+    <h5 class="fw-bold mb-4"><i class="bi bi-car-front me-2"></i>Profit per Car</h5>
+    <div class="table-responsive">
+      <table class="table align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Car</th>
+            <th class="text-end">Trips</th>
+            <th class="text-end text-success">Income</th>
+            <th class="text-end text-danger">Maint. Cost</th>
+            <th class="text-end">Net Profit</th>
+            <th style="min-width:160px;">Margin</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in per_car %}
+          {% set net_col = '#16a34a' if p.net >= 0 else '#dc2626' %}
+          {% set bar_w = [100, p.margin]|min if p.margin > 0 else 0 %}
+          <tr>
+            <td>
+              <div class="d-flex align-items-center gap-2">
+                <img src="{{ p.car.image_url or 'https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=80&q=60' }}"
+                     class="rounded-2 flex-shrink-0" style="width:48px;height:36px;object-fit:cover;"
+                     onerror="this.src='https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=80&q=60'"/>
+                <div>
+                  <div class="fw-semibold">{{ p.car.make }} {{ p.car.model }}</div>
+                  <div class="text-muted small">{{ p.car.year }} · Rs {{ "{:,.0f}".format(p.car.price_per_day) }}/day</div>
+                </div>
+              </div>
+            </td>
+            <td class="text-end">{{ p.trips }}</td>
+            <td class="text-end text-success fw-semibold">Rs {{ "{:,.0f}".format(p.income) }}</td>
+            <td class="text-end text-danger">Rs {{ "{:,.0f}".format(p.cost) }}</td>
+            <td class="text-end fw-bold" style="color:{{ net_col }};">
+              {{ '+' if p.net >= 0 else '' }}Rs {{ "{:,.0f}".format(p.net) }}
+            </td>
+            <td>
+              {% if p.income > 0 %}
+              <div class="d-flex align-items-center gap-2">
+                <div class="progress flex-fill rounded-pill" style="height:10px;">
+                  <div class="progress-bar rounded-pill"
+                       style="width:{{ bar_w }}%;background:{{ '#16a34a' if p.margin >= 50 else ('#f59e0b' if p.margin >= 20 else '#dc2626') }};"></div>
+                </div>
+                <span class="small fw-semibold" style="color:{{ '#16a34a' if p.margin >= 50 else ('#f59e0b' if p.margin >= 20 else '#dc2626') }};">
+                  {{ p.margin }}%
+                </span>
+              </div>
+              {% else %}
+              <span class="text-muted small">No income yet</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{# ── Recent Cash Transactions ── #}
+{% if recent_bookings %}
+<div class="card border-0 shadow-sm rounded-4">
+  <div class="card-body p-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h5 class="fw-bold mb-0"><i class="bi bi-receipt me-2"></i>Recent Cash Receipts</h5>
+      <span class="badge bg-success-subtle text-success px-3 py-2">
+        <i class="bi bi-cash me-1"></i>Cash Only
+      </span>
+    </div>
+    <div class="table-responsive">
+      <table class="table align-middle mb-0">
+        <thead class="table-light">
+          <tr><th>Date</th><th>Customer</th><th>Car</th><th>Duration</th><th class="text-end">Amount</th><th>Status</th></tr>
+        </thead>
+        <tbody>
+          {% for b in recent_bookings %}
+          <tr>
+            <td class="small text-muted">{{ b.created_at.strftime('%d %b %Y') }}</td>
+            <td>
+              <div class="fw-semibold small">{{ b.customer.name }}</div>
+              <div class="text-muted" style="font-size:.75rem;">{{ b.customer.phone or '' }}</div>
+            </td>
+            <td class="small">{{ b.car.make }} {{ b.car.model }}</td>
+            <td class="small text-muted">{{ b.start_date.strftime('%d %b') }} – {{ b.end_date.strftime('%d %b') }} ({{ b.days }}d)</td>
+            <td class="text-end fw-bold text-success">Rs {{ "{:,.0f}".format(b.total_price) }}</td>
+            <td>
+              <span class="badge bg-{{ b.status_color }}">{{ b.status|capitalize }}</span>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="mt-3 p-3 bg-light rounded-3 small text-muted d-flex align-items-center gap-2">
+      <i class="bi bi-info-circle text-primary"></i>
+      All payments collected in <strong>cash</strong>. Online card payments will be available in a future update.
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if all_months %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<script>
+const monthlyData = {{ monthly_data | tojson }};
+const months = {{ all_months | tojson }};
+
+const incomes  = months.map(m => monthlyData[m].income);
+const costs    = months.map(m => monthlyData[m].cost);
+const nets     = months.map(m => monthlyData[m].net);
+
+Chart.register(ChartDataLabels);
+
+new Chart(document.getElementById('financeChart'), {
+  data: {
+    labels: months,
+    datasets: [
+      {
+        type: 'bar',
+        label: 'Income',
+        data: incomes,
+        backgroundColor: 'rgba(22,163,74,0.75)',
+        borderRadius: 6,
+        order: 2,
+        datalabels: { display: false },
+      },
+      {
+        type: 'bar',
+        label: 'Cost',
+        data: costs,
+        backgroundColor: 'rgba(220,38,38,0.7)',
+        borderRadius: 6,
+        order: 2,
+        datalabels: { display: false },
+      },
+      {
+        type: 'line',
+        label: 'Net Profit',
+        data: nets,
+        borderColor: '#1d4ed8',
+        backgroundColor: 'rgba(29,78,216,0.1)',
+        borderWidth: 3,
+        pointRadius: 5,
+        pointBackgroundColor: nets.map(n => n >= 0 ? '#16a34a' : '#dc2626'),
+        pointBorderColor: '#fff',
+        pointBorderWidth: 2,
+        tension: 0.35,
+        fill: true,
+        order: 1,
+        datalabels: {
+          display: true,
+          anchor: 'end',
+          align: 'top',
+          formatter: v => (v >= 0 ? '+' : '') + 'Rs ' + Math.round(v).toLocaleString(),
+          color: ctx => nets[ctx.dataIndex] >= 0 ? '#16a34a' : '#dc2626',
+          font: { weight: 'bold', size: 10 },
+        },
+      },
+    ]
+  },
+  options: {
+    responsive: true,
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: ctx => ` ${ctx.dataset.label}: Rs ${Math.round(ctx.parsed.y).toLocaleString()}`,
+        }
+      },
+    },
+    scales: {
+      x: { grid: { display: false } },
+      y: {
+        beginAtZero: true,
+        ticks: { callback: v => 'Rs ' + v.toLocaleString() },
+        grid: { color: 'rgba(0,0,0,.05)' }
+      }
+    },
+    layout: { padding: { top: 30 } }
+  }
+});
+</script>
+{% endif %}
+{% endblock %}

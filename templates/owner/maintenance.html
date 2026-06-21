@@ -1,0 +1,748 @@
+{% extends "base.html" %}
+{% block title %}Maintenance — {{ car.make }} {{ car.model }}{% endblock %}
+
+{% set TC = {'oil_change':'#f59e0b','tire_change':'#0ea5e9','full_service':'#4f46e5','repair':'#ef4444','other':'#6b7280'} %}
+{% set TL = {'oil_change':'Oil Change','tire_change':'Tire Change','full_service':'Full Service','repair':'Repair','other':'Other'} %}
+{% set TI = {'oil_change':'bi-droplet-fill','tire_change':'bi-circle-fill','full_service':'bi-tools','repair':'bi-wrench-adjustable-circle-fill','other':'bi-gear-fill'} %}
+
+{% block content %}
+
+{# ══════════════════════════════════════════
+   HERO HEADER
+══════════════════════════════════════════ #}
+<div class="maint-hero mb-4">
+  <div class="maint-hero-inner">
+    <div class="d-flex flex-wrap gap-3 align-items-start justify-content-between">
+      <div class="d-flex align-items-center gap-4">
+        <div class="maint-car-icon">
+          <i class="bi bi-car-front-fill"></i>
+        </div>
+        <div>
+          <a href="{{ url_for('owner_cars') }}" class="maint-back-link mb-1 d-inline-flex align-items-center gap-1">
+            <i class="bi bi-arrow-left" style="font-size:.7rem;"></i> My Cars
+          </a>
+          <div class="maint-car-name">
+            {{ car.make }} {{ car.model }}
+            <span class="maint-car-year">{{ car.year }}</span>
+          </div>
+          <div class="d-flex flex-wrap gap-2 mt-2">
+            <span class="maint-pill"><i class="bi bi-speedometer2 me-1"></i>{{ "{:,.0f}".format(car.current_km or 0) }} km</span>
+            {% if car.oil_change_due_km %}
+            <span class="maint-pill"><i class="bi bi-droplet-fill me-1" style="color:#f59e0b;"></i>Oil @ {{ "{:,.0f}".format(car.oil_change_due_km) }} km</span>
+            {% endif %}
+            {% if car.service_due_km %}
+            <span class="maint-pill"><i class="bi bi-tools me-1" style="color:#a78bfa;"></i>Service @ {{ "{:,.0f}".format(car.service_due_km) }} km</span>
+            {% endif %}
+            <span class="maint-pill"><i class="bi bi-cash me-1" style="color:#34d399;"></i>Rs {{ "{:,.0f}".format(total_cost) }} total cost</span>
+          </div>
+        </div>
+      </div>
+      <div class="d-flex gap-2 align-items-start flex-shrink-0">
+        <button class="btn maint-btn-ghost btn-sm" data-bs-toggle="modal" data-bs-target="#kmModal">
+          <i class="bi bi-speedometer2 me-1"></i>Update KM
+        </button>
+        <a href="{{ url_for('owner_maintenance_add', car_id=car.id) }}" class="btn btn-warning btn-sm fw-semibold">
+          <i class="bi bi-plus-lg me-1"></i>Add Record
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ══════════════════════════════════════════
+   STATS STRIP
+══════════════════════════════════════════ #}
+<div class="maint-stats-strip mb-4">
+  <div class="maint-stat-cell">
+    <div class="maint-stat-icon" style="background:rgba(239,68,68,0.12);color:#ef4444;">
+      <i class="bi bi-cash-stack"></i>
+    </div>
+    <div>
+      <div class="maint-stat-label">Total Cost</div>
+      <div class="maint-stat-val">Rs {{ "{:,.0f}".format(total_cost) }}</div>
+    </div>
+  </div>
+  <div class="maint-stat-divider"></div>
+  <div class="maint-stat-cell">
+    <div class="maint-stat-icon" style="background:rgba(79,70,229,0.12);color:#6366f1;">
+      <i class="bi bi-clipboard-check"></i>
+    </div>
+    <div>
+      <div class="maint-stat-label">Records</div>
+      <div class="maint-stat-val">{{ records|length }}</div>
+    </div>
+  </div>
+  <div class="maint-stat-divider"></div>
+  <div class="maint-stat-cell">
+    <div class="maint-stat-icon" style="background:rgba(245,158,11,0.12);color:#f59e0b;">
+      <i class="bi bi-droplet-fill"></i>
+    </div>
+    <div>
+      <div class="maint-stat-label">Next Oil Change</div>
+      <div class="maint-stat-val">
+        {% if car.oil_change_due_km %}{{ "{:,.0f}".format(car.oil_change_due_km) }} km
+        {% else %}<span style="font-size:.85rem;color:#94a3b8;">Not set</span>{% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="maint-stat-divider"></div>
+  <div class="maint-stat-cell">
+    <div class="maint-stat-icon" style="background:rgba(168,85,247,0.12);color:#a855f7;">
+      <i class="bi bi-tools"></i>
+    </div>
+    <div>
+      <div class="maint-stat-label">Next Service</div>
+      <div class="maint-stat-val">
+        {% if car.service_due_km %}{{ "{:,.0f}".format(car.service_due_km) }} km
+        {% else %}<span style="font-size:.85rem;color:#94a3b8;">Not set</span>{% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ══════════════════════════════════════════
+   ALERTS
+══════════════════════════════════════════ #}
+{% set oil = car.oil_alert %}
+{% set svc = car.service_alert %}
+{% set tire_alerts = car.tire_alerts %}
+{% set smoke = car.smoke_test_alert %}
+{% if oil or svc or tire_alerts or smoke %}
+<div class="maint-alert-block mb-4">
+  <div class="maint-alert-header">
+    <i class="bi bi-shield-exclamation me-2"></i>Maintenance Alerts
+    <span class="badge ms-2" style="background:rgba(239,68,68,0.15);color:#ef4444;font-size:.7rem;">
+      {{ (1 if oil else 0) + (1 if svc else 0) + (tire_alerts|length) + (1 if smoke else 0) }} issue{{ 's' if ((1 if oil else 0)+(1 if svc else 0)+(tire_alerts|length)+(1 if smoke else 0)) != 1 }}
+    </span>
+  </div>
+  <div class="maint-alert-body">
+    {% if oil %}
+    <div class="maint-alert-row {{ 'overdue' if oil[0]=='overdue' else 'soon' }}">
+      <div class="maint-alert-stripe"></div>
+      <i class="bi bi-droplet-fill maint-alert-ico"></i>
+      <div class="flex-fill">
+        <div class="maint-alert-title">
+          Oil Change — {{ 'Overdue' if oil[0]=='overdue' else 'Due Soon' }}
+        </div>
+        <div class="maint-alert-sub">
+          {% if oil[0]=='overdue' %}
+            {{ "{:,.0f}".format(oil[1]) }} km past due · was due at {{ "{:,.0f}".format(car.oil_change_due_km) }} km · now at {{ "{:,.0f}".format(car.current_km) }} km
+          {% else %}
+            {{ "{:,.0f}".format(oil[1]) }} km remaining · due at {{ "{:,.0f}".format(car.oil_change_due_km) }} km
+          {% endif %}
+        </div>
+      </div>
+      <span class="maint-alert-tag {{ 'overdue' if oil[0]=='overdue' else 'soon' }}">
+        {{ 'OVERDUE' if oil[0]=='overdue' else 'DUE SOON' }}
+      </span>
+    </div>
+    {% endif %}
+    {% if svc %}
+    <div class="maint-alert-row {{ 'overdue' if svc[0]=='overdue' else 'soon' }}">
+      <div class="maint-alert-stripe"></div>
+      <i class="bi bi-tools maint-alert-ico"></i>
+      <div class="flex-fill">
+        <div class="maint-alert-title">
+          Full Service — {{ 'Overdue' if svc[0]=='overdue' else 'Due Soon' }}
+        </div>
+        <div class="maint-alert-sub">
+          {% if svc[0]=='overdue' %}{{ "{:,.0f}".format(svc[1]) }} km past due
+          {% else %}{{ "{:,.0f}".format(svc[1]) }} km remaining{% endif %}
+        </div>
+      </div>
+      <span class="maint-alert-tag {{ 'overdue' if svc[0]=='overdue' else 'soon' }}">
+        {{ 'OVERDUE' if svc[0]=='overdue' else 'DUE SOON' }}
+      </span>
+    </div>
+    {% endif %}
+    {% for tname, tpct in tire_alerts %}
+    <div class="maint-alert-row overdue">
+      <div class="maint-alert-stripe"></div>
+      <i class="bi bi-circle-fill maint-alert-ico"></i>
+      <div class="flex-fill">
+        <div class="maint-alert-title">Tire {{ tname }} — Critical Condition</div>
+        <div class="maint-alert-sub">{{ tpct }}% remaining · Replace immediately</div>
+      </div>
+      <span class="maint-alert-tag overdue">CRITICAL</span>
+    </div>
+    {% endfor %}
+    {% if smoke %}
+    <div class="maint-alert-row {{ 'overdue' if smoke[0]=='overdue' else 'soon' }}">
+      <div class="maint-alert-stripe"></div>
+      <i class="bi bi-wind maint-alert-ico"></i>
+      <div class="flex-fill">
+        <div class="maint-alert-title">
+          Smoke Test — {{ 'Expired' if smoke[0]=='overdue' else 'Expiring Soon' }}
+        </div>
+        <div class="maint-alert-sub">
+          {% if smoke[0]=='overdue' %}
+            Expired {{ smoke[1] }} day{{ 's' if smoke[1] != 1 }} ago · expired on {{ car.smoke_test_expiry.strftime('%d %b %Y') }}
+          {% else %}
+            Expires in {{ smoke[1] }} day{{ 's' if smoke[1] != 1 }} · on {{ car.smoke_test_expiry.strftime('%d %b %Y') }}
+          {% endif %}
+        </div>
+      </div>
+      <span class="maint-alert-tag {{ 'overdue' if smoke[0]=='overdue' else 'soon' }}">
+        {{ 'EXPIRED' if smoke[0]=='overdue' else 'EXPIRING' }}
+      </span>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
+{# ══════════════════════════════════════════
+   SMOKE TEST CARD
+══════════════════════════════════════════ #}
+{% set smoke_days = ((car.smoke_test_expiry - today_date).days) if car.smoke_test_expiry else None %}
+{% set smoke_color = '#ef4444' if (smoke_days is not none and smoke_days < 0) else ('#f59e0b' if (smoke_days is not none and smoke_days <= 30) else '#10b981') %}
+{% set smoke_status = 'Expired' if (smoke_days is not none and smoke_days < 0) else ('Expiring Soon' if (smoke_days is not none and smoke_days <= 30) else ('Valid' if car.smoke_test_expiry else 'Not Set')) %}
+<div class="card mb-4" style="overflow:hidden;">
+  <div class="card-body p-0">
+    <div class="maint-section-head">
+      <div class="d-flex align-items-center gap-2">
+        <span class="maint-section-dot" style="background:#06b6d4;"></span>
+        <span class="fw-bold">Smoke Test <span class="text-muted fw-normal" style="font-size:.8rem;">(Emission Test)</span></span>
+        {% if car.smoke_test_expiry %}
+        <span class="maint-meta-pill ms-2" style="background:{{ smoke_color }}18;color:{{ smoke_color }};">
+          <i class="bi bi-circle-fill me-1" style="font-size:.4rem;"></i>{{ smoke_status }}
+        </span>
+        {% endif %}
+      </div>
+      <button class="btn btn-sm maint-btn-ghost-dark" data-bs-toggle="modal" data-bs-target="#smokeModal">
+        <i class="bi bi-pencil me-1"></i>Update
+      </button>
+    </div>
+
+    <div class="p-4">
+      <div class="d-flex gap-3 flex-wrap">
+
+        {# Status cell #}
+        <div class="smoke-stat-cell">
+          <div class="smoke-stat-icon" style="background:{{ smoke_color }}18; color:{{ smoke_color }};">
+            <i class="bi bi-wind"></i>
+          </div>
+          <div>
+            <div class="smoke-stat-label">Status</div>
+            <div class="smoke-stat-val" style="color:{{ smoke_color }};">{{ smoke_status }}</div>
+          </div>
+        </div>
+
+        {# Test date cell #}
+        <div class="smoke-stat-divider"></div>
+        <div class="smoke-stat-cell">
+          <div class="smoke-stat-icon" style="background:rgba(99,102,241,0.12);color:#6366f1;">
+            <i class="bi bi-calendar-check-fill"></i>
+          </div>
+          <div>
+            <div class="smoke-stat-label">Test Date</div>
+            <div class="smoke-stat-val">
+              {{ car.smoke_test_date.strftime('%d %b %Y') if car.smoke_test_date else '—' }}
+            </div>
+          </div>
+        </div>
+
+        {# Expiry date cell #}
+        <div class="smoke-stat-divider"></div>
+        <div class="smoke-stat-cell">
+          <div class="smoke-stat-icon" style="background:rgba(245,158,11,0.12);color:#f59e0b;">
+            <i class="bi bi-calendar-x-fill"></i>
+          </div>
+          <div>
+            <div class="smoke-stat-label">Expiry Date</div>
+            <div class="smoke-stat-val">
+              {{ car.smoke_test_expiry.strftime('%d %b %Y') if car.smoke_test_expiry else '—' }}
+            </div>
+          </div>
+        </div>
+
+        {# Days remaining cell #}
+        {% if smoke_days is not none %}
+        <div class="smoke-stat-divider"></div>
+        <div class="smoke-stat-cell">
+          <div class="smoke-stat-icon" style="background:{{ smoke_color }}18;color:{{ smoke_color }};">
+            <i class="bi bi-hourglass-split"></i>
+          </div>
+          <div>
+            <div class="smoke-stat-label">{{ 'Days Overdue' if smoke_days < 0 else 'Days Left' }}</div>
+            <div class="smoke-stat-val" style="color:{{ smoke_color }};">{{ smoke_days|abs }}</div>
+          </div>
+        </div>
+        {% endif %}
+
+      </div>
+
+      {# Progress bar — only if expiry set and test date set #}
+      {% if car.smoke_test_date and car.smoke_test_expiry %}
+      {% set total_days = (car.smoke_test_expiry - car.smoke_test_date).days %}
+      {% set used_days  = ((today_date - car.smoke_test_date).days) %}
+      {% set pct = [[(used_days / total_days * 100)|int, 0]|max, 100]|min %}
+      <div class="mt-4">
+        <div class="d-flex justify-content-between mb-1" style="font-size:.72rem;color:var(--muted);">
+          <span>{{ car.smoke_test_date.strftime('%d %b %Y') }}</span>
+          <span>{{ pct }}% of validity used</span>
+          <span>{{ car.smoke_test_expiry.strftime('%d %b %Y') }}</span>
+        </div>
+        <div class="progress" style="height:6px;border-radius:99px;">
+          <div class="progress-bar" role="progressbar"
+               style="width:{{ pct }}%;background:{{ smoke_color }};border-radius:99px;"></div>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{# ══════════════════════════════════════════
+   TIRE CONDITION
+══════════════════════════════════════════ #}
+<div class="card mb-4" style="overflow:hidden;">
+  <div class="card-body p-0">
+    {# Section header #}
+    <div class="maint-section-head">
+      <div class="d-flex align-items-center gap-2">
+        <span class="maint-section-dot" style="background:#0ea5e9;"></span>
+        <span class="fw-bold">Tire Condition</span>
+        {% if car.last_tire_change_km %}
+        <span class="maint-meta-pill ms-2">Last changed @ {{ "{:,.0f}".format(car.last_tire_change_km) }} km</span>
+        {% endif %}
+      </div>
+      <button class="btn btn-sm maint-btn-ghost-dark" data-bs-toggle="modal" data-bs-target="#tireModal">
+        <i class="bi bi-pencil me-1"></i>Manual Update
+      </button>
+    </div>
+
+    <div class="p-4">
+      {# ── 2×2 Tire grid ── #}
+      <div class="tire-grid mb-4">
+        {% for label, pos, pct in [
+            ('Front Left',  'fl', car.tire_fl),
+            ('Front Right', 'fr', car.tire_fr),
+            ('Rear Left',   'rl', car.tire_rl),
+            ('Rear Right',  'rr', car.tire_rr)
+          ] %}
+        {% set col = '#10b981' if pct >= 60 else ('#f59e0b' if pct >= 30 else '#ef4444') %}
+        {% set status = 'Good' if pct >= 60 else ('Worn' if pct >= 30 else 'Critical') %}
+        <div class="tire-cell">
+          <div class="tire-cell-label">{{ label }}</div>
+          <div class="tire-gauge-wrap mx-auto">
+            <svg viewBox="0 0 100 100" class="tire-gauge">
+              <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(99,102,241,0.08)" stroke-width="10"/>
+              <circle cx="50" cy="50" r="40" fill="none" stroke="{{ col }}" stroke-width="10"
+                      stroke-dasharray="{{ pct * 2.513 }} 251.3"
+                      stroke-linecap="round" transform="rotate(-90 50 50)" class="tire-arc"/>
+              <text x="50" y="46" text-anchor="middle" font-size="22" font-weight="800" fill="{{ col }}"
+                    font-family="'Inter',sans-serif">{{ pct }}%</text>
+              <text x="50" y="62" text-anchor="middle" font-size="9" fill="#94a3b8"
+                    font-family="'Inter',sans-serif">condition</text>
+            </svg>
+          </div>
+          <div class="tire-status-pill" style="background:{{ col }}20;color:{{ col }};">
+            <span class="tire-status-dot" style="background:{{ col }};"></span>{{ status }}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      {# ── KM progress ── #}
+      {% if car.km_since_tire_change is not none %}
+      {% set km_used_pct = [100, (car.km_since_tire_change / (car.tire_life_km or 40000) * 100)|round|int]|min %}
+      {% set bar_col = '#10b981' if km_used_pct <= 40 else ('#f59e0b' if km_used_pct <= 70 else '#ef4444') %}
+      <div class="maint-km-bar-wrap">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <span class="maint-km-bar-label">
+            <i class="bi bi-speedometer2 me-1"></i>Tire Life Used
+          </span>
+          <span style="font-size:.8rem;font-weight:700;color:{{ bar_col }};font-family:'Inter',monospace;">
+            {{ "{:,.0f}".format(car.km_since_tire_change) }} / {{ "{:,.0f}".format(car.tire_life_km or 40000) }} km
+            <span style="opacity:.6;font-weight:400;">({{ km_used_pct }}% used)</span>
+          </span>
+        </div>
+        <div class="maint-km-track">
+          <div class="maint-km-fill" style="width:{{ km_used_pct }}%;background:{{ bar_col }};"></div>
+        </div>
+        <div class="d-flex justify-content-between mt-1" style="font-size:.72rem;color:#94a3b8;">
+          <span>0 km</span>
+          <span style="color:{{ bar_col }};font-weight:600;">{{ "{:,.0f}".format(car.km_remaining_on_tires) }} km remaining</span>
+          <span>{{ "{:,.0f}".format(car.tire_life_km or 40000) }} km</span>
+        </div>
+      </div>
+      {% endif %}
+
+      {# ── Legend ── #}
+      {% if car.auto_tire_pct is none and not car.last_tire_change_km %}
+      <div class="maint-hint-box mt-3">
+        <i class="bi bi-info-circle me-2"></i>Add a <strong>Tire Change</strong> record to enable KM-based auto-calculation
+      </div>
+      {% endif %}
+      <div class="d-flex gap-4 justify-content-center mt-3" style="font-size:.78rem;color:#64748b;">
+        <span><span class="tire-legend-dot" style="background:#10b981;"></span>Good ≥ 60%</span>
+        <span><span class="tire-legend-dot" style="background:#f59e0b;"></span>Worn 30–59%</span>
+        <span><span class="tire-legend-dot" style="background:#ef4444;"></span>Critical &lt; 30%</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ══════════════════════════════════════════
+   MONTHLY COST CHART
+══════════════════════════════════════════ #}
+{% if cost_stacked %}
+<div class="card mb-4" style="overflow:hidden;">
+  <div class="maint-section-head">
+    <div class="d-flex align-items-center gap-2">
+      <span class="maint-section-dot" style="background:#4f46e5;"></span>
+      <span class="fw-bold">Monthly Maintenance Cost</span>
+    </div>
+    <div class="d-flex flex-wrap gap-3">
+      {% for rt in rtypes %}{% if cost_by_type.get(rt,0) > 0 %}
+      <span style="font-size:.72rem;display:flex;align-items:center;gap:5px;color:#64748b;">
+        <span style="width:8px;height:8px;border-radius:50%;background:{{ TC[rt] }};display:inline-block;"></span>
+        {{ TL[rt] }} · Rs {{ "{:,.0f}".format(cost_by_type.get(rt,0)) }}
+      </span>
+      {% endif %}{% endfor %}
+    </div>
+  </div>
+  <div class="card-body p-4">
+    <canvas id="monthChart" height="110" class="mb-4"></canvas>
+    <div class="table-responsive">
+      <table class="table table-sm align-middle mb-0" style="font-size:.82rem;">
+        <thead>
+          <tr style="background:rgba(79,70,229,0.04);border-bottom:2px solid rgba(79,70,229,0.1);">
+            <th style="padding:.6rem 1rem;font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:#64748b;font-weight:700;">Month</th>
+            {% for rt in rtypes %}{% if cost_by_type.get(rt,0) > 0 %}
+            <th class="text-end" style="padding:.6rem 1rem;font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:{{ TC[rt] }};font-weight:700;">{{ TL[rt] }}</th>
+            {% endif %}{% endfor %}
+            <th class="text-end" style="padding:.6rem 1rem;font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:#ef4444;font-weight:700;">Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for month, breakdown in cost_stacked.items() %}
+          <tr style="border-bottom:1px solid rgba(99,102,241,0.06);">
+            <td style="padding:.6rem 1rem;font-weight:600;color:#0f172a;">{{ month }}</td>
+            {% for rt in rtypes %}{% if cost_by_type.get(rt,0) > 0 %}
+            <td class="text-end" style="padding:.6rem 1rem;">
+              {% if breakdown.get(rt,0) > 0 %}
+              <span style="font-size:.75rem;font-weight:600;color:{{ TC[rt] }};background:{{ TC[rt] }}15;padding:.2em .6em;border-radius:6px;">
+                {{ "{:,.0f}".format(breakdown[rt]) }}
+              </span>
+              {% else %}<span style="color:#cbd5e1;">—</span>{% endif %}
+            </td>
+            {% endif %}{% endfor %}
+            <td class="text-end" style="padding:.6rem 1rem;font-weight:700;color:#ef4444;font-family:'Inter',monospace;">
+              {{ "{:,.0f}".format(monthly_totals[month]) }}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr style="background:rgba(79,70,229,0.04);border-top:2px solid rgba(79,70,229,0.1);">
+            <td style="padding:.6rem 1rem;font-weight:700;">Total</td>
+            {% for rt in rtypes %}{% if cost_by_type.get(rt,0) > 0 %}
+            <td class="text-end" style="padding:.6rem 1rem;font-weight:700;color:{{ TC[rt] }};">{{ "{:,.0f}".format(cost_by_type.get(rt,0)) }}</td>
+            {% endif %}{% endfor %}
+            <td class="text-end" style="padding:.6rem 1rem;font-weight:800;color:#ef4444;font-size:.95rem;font-family:'Inter',monospace;">{{ "{:,.0f}".format(total_cost) }}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{# ══════════════════════════════════════════
+   MAINTENANCE HISTORY (TIMELINE)
+══════════════════════════════════════════ #}
+<div class="card" style="overflow:hidden;">
+  <div class="maint-section-head">
+    <div class="d-flex align-items-center gap-2">
+      <span class="maint-section-dot" style="background:#10b981;"></span>
+      <span class="fw-bold">Maintenance History</span>
+      {% if records %}
+      <span class="maint-meta-pill ms-1">{{ records|length }} record{{ 's' if records|length != 1 }}</span>
+      {% endif %}
+    </div>
+    <a href="{{ url_for('owner_maintenance_add', car_id=car.id) }}" class="btn btn-sm btn-primary">
+      <i class="bi bi-plus-lg me-1"></i>Add Record
+    </a>
+  </div>
+
+  {% if records %}
+  <div class="maint-timeline">
+    {% for r in records %}
+    {% set rcolor = TC.get(r.record_type, '#6b7280') %}
+    <div class="maint-record">
+      <div class="maint-record-left">
+        <div class="maint-record-dot" style="background:{{ rcolor }};box-shadow:0 0 0 4px {{ rcolor }}20;"></div>
+        {% if not loop.last %}<div class="maint-record-line" style="background:linear-gradient({{ rcolor }},rgba(226,232,240,0));"></div>{% endif %}
+      </div>
+      <div class="maint-record-body">
+        <div class="maint-record-header">
+          <div class="d-flex align-items-center gap-2 flex-wrap">
+            <span class="maint-type-chip" style="background:{{ rcolor }}15;color:{{ rcolor }};border:1px solid {{ rcolor }}30;">
+              <i class="bi {{ TI.get(r.record_type,'bi-gear-fill') }} me-1" style="font-size:.7rem;"></i>{{ TL.get(r.record_type, r.record_type) }}
+            </span>
+            <span class="maint-record-title">{{ r.title }}</span>
+          </div>
+          <div class="maint-record-cost">Rs {{ "{:,.0f}".format(r.cost or 0) }}</div>
+        </div>
+        {% if r.description %}
+        <div class="maint-record-desc">{{ r.description }}</div>
+        {% endif %}
+        <div class="maint-record-meta">
+          <span><i class="bi bi-calendar3 me-1"></i>{{ r.service_date.strftime('%d %b %Y') }}</span>
+          {% if r.km_at_service %}
+          <span><i class="bi bi-speedometer2 me-1"></i>{{ "{:,.0f}".format(r.km_at_service) }} km</span>
+          {% endif %}
+          {% if r.next_service_km %}
+          <span><i class="bi bi-flag me-1"></i>Next @ {{ "{:,.0f}".format(r.next_service_km) }} km</span>
+          {% endif %}
+          <form method="POST" action="{{ url_for('owner_maintenance_delete', car_id=car.id, record_id=r.id) }}"
+                onsubmit="return confirm('Delete this record?')" class="ms-auto">
+            <button class="btn btn-link p-0 text-muted maint-delete-btn" title="Delete">
+              <i class="bi bi-trash"></i>
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+    <div class="maint-timeline-footer">
+      <div class="maint-timeline-total-label">Total maintenance cost</div>
+      <div class="maint-timeline-total-val">Rs {{ "{:,.0f}".format(total_cost) }}</div>
+    </div>
+  </div>
+  {% else %}
+  <div class="text-center py-5">
+    <div style="width:72px;height:72px;background:rgba(79,70,229,0.06);border-radius:20px;display:inline-flex;align-items:center;justify-content:center;margin-bottom:1.25rem;">
+      <i class="bi bi-clipboard-x fs-2" style="color:#6366f1;"></i>
+    </div>
+    <p class="fw-semibold mb-1">No records yet</p>
+    <p class="text-muted small mb-3">Start tracking maintenance to get KM alerts and cost summaries</p>
+    <a href="{{ url_for('owner_maintenance_add', car_id=car.id) }}" class="btn btn-primary">
+      <i class="bi bi-plus-lg me-1"></i>Add First Record
+    </a>
+  </div>
+  {% endif %}
+</div>
+
+{# ══ Smoke Test Modal ══ #}
+<div class="modal fade" id="smokeModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content rounded-4 border-0">
+      <form method="POST" action="{{ url_for('owner_smoke_test_update', car_id=car.id) }}">
+        <div class="modal-header border-0 pb-0">
+          <h5 class="modal-title fw-bold"><i class="bi bi-wind me-2"></i>Update Smoke Test</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body pt-3">
+          <div class="p-3 rounded-3 mb-4" style="background:rgba(6,182,212,0.07);border:1px solid rgba(6,182,212,0.2);font-size:.82rem;color:#67e8f9;">
+            <i class="bi bi-info-circle me-1"></i>
+            Sri Lanka emission test is typically valid for <strong>1 year</strong>. Set the test date and expiry date below.
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Test Date</label>
+            <input type="date" name="smoke_test_date" class="form-control"
+                   value="{{ car.smoke_test_date.isoformat() if car.smoke_test_date else '' }}"/>
+          </div>
+          <div class="mb-1">
+            <label class="form-label">Expiry Date</label>
+            <input type="date" name="smoke_test_expiry" class="form-control"
+                   value="{{ car.smoke_test_expiry.isoformat() if car.smoke_test_expiry else '' }}"/>
+          </div>
+          <div class="mt-2" style="font-size:.75rem;color:var(--muted);">
+            <i class="bi bi-lightbulb me-1"></i>Alert shows when &lt;30 days to expiry or expired.
+          </div>
+        </div>
+        <div class="modal-footer border-0 pt-0">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check-lg me-1"></i>Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{# ══ KM Modal ══ #}
+<div class="modal fade" id="kmModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content rounded-4 border-0">
+      <form method="POST" action="{{ url_for('owner_update_km', car_id=car.id) }}">
+        <div class="modal-header border-0 pb-0">
+          <h5 class="modal-title fw-bold"><i class="bi bi-speedometer2 me-2"></i>Update Odometer</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body pt-3">
+          <div class="p-3 rounded-3 mb-3" style="background:rgba(6,182,212,0.06);border:1px solid rgba(6,182,212,0.2);font-size:.82rem;color:#0284c7;">
+            <i class="bi bi-info-circle me-1"></i>
+            Tire % will be <strong>auto-calculated</strong>:
+            <code style="background:rgba(6,182,212,0.1);padding:.1em .4em;border-radius:4px;">100 − (km_since_change ÷ tire_life × 100)</code>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Current Odometer (KM)</label>
+            <input type="number" name="current_km" class="form-control form-control-lg"
+                   value="{{ car.current_km or 0 }}" min="0" required id="kmInput"/>
+          </div>
+          <div class="row g-3 mb-3">
+            <div class="col-6">
+              <label class="form-label fw-semibold small">Oil Change Every (KM)</label>
+              <input type="number" name="oil_interval" class="form-control"
+                     value="{{ car.oil_change_interval_km or 5000 }}" min="500" step="500"/>
+            </div>
+            <div class="col-6">
+              <label class="form-label fw-semibold small">Service Every (KM)</label>
+              <input type="number" name="service_interval" class="form-control"
+                     value="{{ car.service_interval_km or 10000 }}" min="1000" step="1000"/>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold small">Tire Full Life (KM)</label>
+            <input type="number" name="tire_life_km" class="form-control"
+                   value="{{ car.tire_life_km or 40000 }}" min="5000" step="1000" id="tireLifeInput"/>
+          </div>
+          {% if car.last_tire_change_km %}
+          <div class="p-3 rounded-3" style="background:rgba(79,70,229,0.05);border:1px solid rgba(79,70,229,0.12);" id="tirePreviewCard">
+            <div class="fw-semibold mb-2" style="font-size:.82rem;"><i class="bi bi-circle-fill me-1 text-info"></i>Tire Condition Preview</div>
+            <div class="d-flex justify-content-between mb-1" style="font-size:.8rem;color:#64748b;">
+              <span>Last changed at</span><strong style="font-family:monospace;">{{ "{:,.0f}".format(car.last_tire_change_km) }} km</strong>
+            </div>
+            <div class="d-flex justify-content-between mb-2" style="font-size:.8rem;color:#64748b;">
+              <span>KM driven since</span><strong id="prevDriven" style="font-family:monospace;">{{ "{:,.0f}".format(car.km_since_tire_change or 0) }} km</strong>
+            </div>
+            <div class="d-flex justify-content-between pt-2 fw-bold" style="border-top:1px solid rgba(79,70,229,0.1);">
+              <span>Calculated Tire %</span>
+              <span id="prevPct" style="font-size:1.1rem;font-family:monospace;">{{ car.auto_tire_pct }}%</span>
+            </div>
+          </div>
+          {% endif %}
+        </div>
+        <div class="modal-footer border-0">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary fw-semibold px-4">
+            <i class="bi bi-calculator me-1"></i>Save & Auto-Calculate
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{# ══ Tire Manual Modal ══ #}
+<div class="modal fade" id="tireModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content rounded-4 border-0">
+      <form method="POST" action="{{ url_for('owner_update_tires', car_id=car.id) }}">
+        <div class="modal-header border-0 pb-0">
+          <h5 class="modal-title fw-bold"><i class="bi bi-circle me-2"></i>Manual Tire Update</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body pt-3">
+          <p class="text-muted small mb-3">Override individual tire percentages (0 = worn out, 100 = brand new).</p>
+          <div class="row g-3">
+            {% for fname, label, val in [('tire_fl','Front Left',car.tire_fl),('tire_fr','Front Right',car.tire_fr),('tire_rl','Rear Left',car.tire_rl),('tire_rr','Rear Right',car.tire_rr)] %}
+            <div class="col-6">
+              <label class="form-label fw-semibold small">{{ label }} (%)</label>
+              <input type="number" name="{{ fname }}" class="form-control" min="0" max="100"
+                     value="{{ val or 100 }}" id="inp_{{ fname }}" oninput="updateTireBar(this)"/>
+              <div class="rounded mt-1" id="bar_{{ fname }}"
+                   style="height:5px;background:{{ '#10b981' if (val or 100) >= 60 else ('#f59e0b' if (val or 100) >= 30 else '#ef4444') }};width:{{ val or 100 }}%;transition:all .3s;"></div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+        <div class="modal-footer border-0">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary fw-semibold px-4">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<script>
+function updateTireBar(inp) {
+  const v = parseInt(inp.value) || 0;
+  const bar = document.getElementById('bar_' + inp.name);
+  bar.style.background = v >= 60 ? '#10b981' : (v >= 30 ? '#f59e0b' : '#ef4444');
+  bar.style.width = v + '%';
+}
+
+{% if car.last_tire_change_km %}
+const lastTireKm   = {{ car.last_tire_change_km }};
+const kmInput      = document.getElementById('kmInput');
+const tireLifeInput= document.getElementById('tireLifeInput');
+const prevDriven   = document.getElementById('prevDriven');
+const prevPct      = document.getElementById('prevPct');
+function updateTirePreview() {
+  const km   = parseInt(kmInput.value)      || 0;
+  const life = parseInt(tireLifeInput.value) || 40000;
+  const driven = Math.max(0, km - lastTireKm);
+  const pct    = Math.max(0, Math.round(100 - (driven / life * 100)));
+  prevDriven.textContent = driven.toLocaleString() + ' km';
+  prevPct.textContent    = pct + '%';
+  prevPct.style.color    = pct >= 60 ? '#10b981' : (pct >= 30 ? '#f59e0b' : '#ef4444');
+}
+kmInput.addEventListener('input', updateTirePreview);
+tireLifeInput.addEventListener('input', updateTirePreview);
+{% endif %}
+
+{% if cost_stacked %}
+const TYPE_COLORS = { oil_change:'#f59e0b', tire_change:'#0ea5e9', full_service:'#4f46e5', repair:'#ef4444', other:'#6b7280' };
+const TYPE_LABELS = { oil_change:'Oil Change', tire_change:'Tire Change', full_service:'Full Service', repair:'Repair', other:'Other' };
+const stackedData  = {{ cost_stacked | tojson }};
+const rtypes       = {{ rtypes | tojson }};
+const months       = Object.keys(stackedData);
+const activeTypes  = rtypes.filter(rt => {{ cost_by_type | tojson }}[rt] > 0);
+const totals       = months.map(m => Object.values(stackedData[m]).reduce((a,b)=>a+b,0));
+
+Chart.register(ChartDataLabels);
+new Chart(document.getElementById('monthChart'), {
+  type: 'bar',
+  data: {
+    labels: months,
+    datasets: activeTypes.map(rt => ({
+      label: TYPE_LABELS[rt],
+      data: months.map(m => stackedData[m][rt] || 0),
+      backgroundColor: TYPE_COLORS[rt] + 'cc',
+      borderColor: TYPE_COLORS[rt],
+      borderWidth: 1,
+      borderRadius: 6,
+      borderSkipped: false,
+    }))
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { position:'bottom', labels:{ usePointStyle:true, pointStyle:'circle', padding:16, font:{size:11} } },
+      tooltip: {
+        backgroundColor:'rgba(15,23,42,0.92)',
+        borderColor:'rgba(99,102,241,0.2)', borderWidth:1,
+        padding:10, cornerRadius:10,
+        callbacks: {
+          label: ctx => `  ${ctx.dataset.label}: Rs ${ctx.parsed.y.toLocaleString()}`,
+          footer: items => `  Total: Rs ${totals[items[0].dataIndex].toLocaleString()}`
+        }
+      },
+      datalabels: {
+        display: ctx => ctx.datasetIndex === activeTypes.length-1 && totals[ctx.dataIndex] > 0,
+        anchor:'end', align:'end',
+        formatter: (_,ctx) => 'Rs '+totals[ctx.dataIndex].toLocaleString(),
+        color:'#0f172a', font:{ weight:'bold', size:10, family:'Inter' },
+      }
+    },
+    scales: {
+      x: { stacked:true, grid:{ display:false }, ticks:{ font:{size:11} } },
+      y: { stacked:true, beginAtZero:true, grid:{ color:'rgba(99,102,241,0.06)' },
+           ticks:{ callback: v => 'Rs '+v.toLocaleString(), font:{size:11} } }
+    },
+    layout: { padding:{ top:28 } }
+  }
+});
+{% endif %}
+</script>
+{% endblock %}

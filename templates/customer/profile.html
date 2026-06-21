@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}My Profile — RentCar{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-7">
+    <h4 class="fw-bold mb-4">My Profile</h4>
+
+    <div class="row g-4 mb-4">
+      <div class="col-6">
+        <div class="stat-card" style="border-left:4px solid #1e3a8a;">
+          <div class="stat-icon" style="background:#eff6ff;color:#1e3a8a;"><i class="bi bi-calendar-check-fill"></i></div>
+          <div>
+            <div class="stat-label">Total Bookings</div>
+            <div class="stat-value">{{ total_bookings }}</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-6">
+        <div class="stat-card" style="border-left:4px solid #7c3aed;">
+          <div class="stat-icon" style="background:#f5f3ff;color:#7c3aed;"><i class="bi bi-cash"></i></div>
+          <div>
+            <div class="stat-label">Total Spent</div>
+            <div class="stat-value">Rs {{ "{:,.0f}".format(total_spent) }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4">
+      <div class="card-body p-4">
+        <h5 class="fw-bold mb-4"><i class="bi bi-person-fill me-2"></i>Edit Profile</h5>
+        <form method="POST">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Full Name</label>
+            <input type="text" name="name" class="form-control" value="{{ current_user.name }}" required/>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Email</label>
+            <input type="email" class="form-control bg-light" value="{{ current_user.email }}" disabled/>
+            <div class="form-text">Email cannot be changed.</div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Phone Number</label>
+            <input type="tel" name="phone" class="form-control" value="{{ current_user.phone or '' }}" placeholder="07X XXXXXXX"/>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Address</label>
+            <textarea name="address" class="form-control" rows="2" placeholder="Your address">{{ current_user.address or '' }}</textarea>
+          </div>
+          <hr/>
+          <h6 class="fw-bold mb-3">Change Password <span class="text-muted fw-normal small">(leave blank to keep current)</span></h6>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">New Password</label>
+            <input type="password" name="new_password" class="form-control" placeholder="At least 6 characters"/>
+          </div>
+          <button type="submit" class="btn btn-primary fw-semibold px-4">
+            <i class="bi bi-check-lg me-1"></i>Save Changes
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4 mt-4">
+      <div class="card-body p-4">
+        <h6 class="fw-bold mb-3 text-muted">Account Info</h6>
+        <div class="d-flex gap-3 small text-muted">
+          <span><i class="bi bi-shield-check me-1"></i>Role: <strong>Customer</strong></span>
+          <span><i class="bi bi-calendar me-1"></i>Joined: <strong>{{ current_user.created_at.strftime('%b %Y') }}</strong></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
