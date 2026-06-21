@@ -6,10 +6,11 @@ from functools import wraps
 from sqlalchemy import text
 from models import db, User, Car, Booking, MaintenanceRecord
 from translations import TRANSLATIONS
+import os
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'rentcar-secret-2024-xk9'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///rentcar.db'
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'rentcar-secret-2024-xk9')
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///rentcar.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
@@ -839,9 +840,18 @@ def seed_data():
     db.session.commit()
 
 
-if __name__ == '__main__':
+def init_db():
+    """Set up the database. Runs both locally and on the host (gunicorn)."""
     with app.app_context():
         db.create_all()
         run_migrations()
         seed_data()
-    app.run(debug=True, port=5000)
+
+
+# Runs when gunicorn imports this module on the host
+init_db()
+
+
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 5000))
+    app.run(debug=True, host='0.0.0.0', port=port)
